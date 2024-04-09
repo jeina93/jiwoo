@@ -3,4 +3,4 @@ from datetime import datetime
 
 st.write("hello")
 
-st.selectbox("Choose yout model", ("GPT-3","GPT-4"))
+st.selectbox("Choose your model", ("GPT-3","GPT-4"))
