@@ -166,7 +166,7 @@ with st.sidebar:
 
     st.markdown(
         """
-        Jiwoo git rink : https://github.com/jeina93/jiwoo
+        Jiwoo git rink : https://github.com/jeina93/jiwoo/blob/main/pages/SiteGTP.py
     
         """
     )
