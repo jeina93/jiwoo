@@ -1,4 +1,3 @@
-import re
 from langchain.document_loaders import SitemapLoader
 from langchain.schema.runnable import RunnableLambda, RunnablePassthrough
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -7,17 +6,6 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 import streamlit as st
-from langchain.callbacks import StreamingStdOutCallbackHandler
-
-api_key =""
-
-llm = ChatOpenAI(
-    temperature=0.1,
-    model="gpt-3.5-turbo-1106",
-    streaming=True,
-    callbacks=[StreamingStdOutCallbackHandler()],
-    openai_api_key=api_key
-)
 
 answers_prompt = ChatPromptTemplate.from_template(
     """
@@ -52,6 +40,12 @@ def get_answers(inputs):
     docs = inputs["docs"]
     question = inputs["question"]
     answers_chain = answers_prompt | llm
+    # answers = []
+    # for doc in docs:
+    #     result = answers_chain.invoke(
+    #         {"question": question, "context": doc.page_content}
+    #     )
+    #     answers.append(result.content)
     return {
         "question": question,
         "answers": [
@@ -118,14 +112,13 @@ def parse_page(soup):
 
 
 @st.cache_data(show_spinner="Loading website...")
-def load_website():
-    #url = "https://developers.cloudflare.com/ai-gateway/"
+def load_website(url):
     splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         chunk_size=1000,
         chunk_overlap=200,
     )
     loader = SitemapLoader(
-        "https://developers.cloudflare.com/ai-gateway/",
+        url,
         parsing_function=parse_page,
     )
     loader.requests_per_second = 2
@@ -140,33 +133,25 @@ st.set_page_config(
 )
 
 
-# st.markdown(
-#     """
-#     # SiteGPT
+st.markdown(
+    """
+    # SiteGPT
             
-#     Ask questions about the content of a website.
+    Ask questions about the content of a website.
             
-#     Start by writing the URL of the website on the sidebar.
-# """
-# )
+    Start by writing the URL of the website on the sidebar.
+"""
+)
 
-def get_url():
-    with st._main:
-        retriever = load_website()
-        query = st.text_input("Ask a question to the website.")
-        if query:
-            chain = (
-                {
-                    "docs": retriever,
-                    "question": RunnablePassthrough(),
-                }
-                | RunnableLambda(get_answers)
-                | RunnableLambda(choose_answer)
-            )
-            result = chain.invoke(query)
-            st.markdown(result.content.replace("$", "\$"))
 
 with st.sidebar:
+    url = st.text_input(
+        "Write down a URL",
+        placeholder="https://example.com",
+    )
+    
+    st.divider()
+
     if "api_key" not in st.session_state:
         st.session_state.api_key = ""
 
@@ -176,16 +161,16 @@ with st.sidebar:
         key="api_key_input",
     )
     st.session_state["api_key"] = api_key
+
+    st.divider()
+
+    st.markdown(
+        """
+        Jiwoo git rink : https://github.com/jeina93/jiwoo
     
-    button = st.button("저장")
+        """
+    )
 
-    st.write("Made by Jiwoo")
-    st.write("")
-
-
-# if button:
-#     st.divider()
-    
 if not api_key:
     st.warning("Input your OPENAI_API_KEY on the sidebar!")
 else:
@@ -193,9 +178,19 @@ else:
         temperature=0.1,
         openai_api_key=api_key,
     )
-    print("여기")
-    #get_url()
 
 
-
-    
+if url:
+    retriever = load_website(url)
+    query = st.text_input("Ask a question to the website.")
+    if query and api_key:
+        chain = (
+            {
+                "docs": retriever,
+                "question": RunnablePassthrough(),
+            }
+            | RunnableLambda(get_answers)
+            | RunnableLambda(choose_answer)
+        )
+        result = chain.invoke(query)
+        st.markdown(result.content.replace("$", "\$"))
